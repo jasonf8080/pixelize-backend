@@ -2,62 +2,80 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
-
-require("dotenv").config();
-const app = express();
-
+const path = require("path");
 const mongoose = require("mongoose");
 
+require("dotenv").config();
 
 const userRouter = require("./routes/userRouter");
 const likeRouter = require("./routes/likeRouter");
 const postRouter = require("./routes/postRouter");
 
-const notFound = require("./middleware/notFound")
-const errorHandler = require("./middleware/errorHandler")
+const notFound = require("./middleware/notFound");
+const errorHandler = require("./middleware/errorHandler");
 
+const app = express();
 
-app.use(cors());
+/* -------------------- DB -------------------- */
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URL);
+    console.log("✅ MongoDB connected");
+  } catch (error) {
+    console.error("❌ MongoDB connection error:", error.message);
+    process.exit(1);
+  }
+};
+
+/* -------------------- Middleware -------------------- */
+app.set("trust proxy", 1); // important on Render (secure cookies, proxies)
+
+app.use(
+  cors({
+    origin: [
+      process.env.CLIENT_URL, // e.g. https://pixelize.vercel.app
+      "http://localhost:3000",
+    ].filter(Boolean),
+    credentials: true,
+  })
+);
+
 app.use(express.json());
-app.use(morgan("dev")); 
-
-app.get("/", (req, res) => {
- res.send('Hey')
-});
-
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(morgan("dev"));
+
+/* -------------------- API Routes -------------------- */
+app.get("/api", (req, res) => {
+  res.send("API running");
+});
 
 app.use("/api/auth", userRouter);
 app.use("/api/like", likeRouter);
 app.use("/api/post", postRouter);
 
+/* -------------------- Serve React in Production -------------------- */
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "client", "build")));
+
+  // SPA fallback (must be AFTER API routes)
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "client", "build", "index.html"));
+  });
+}
+
+/* -------------------- Errors -------------------- */
 app.use(notFound);
 app.use(errorHandler);
 
-
-// const PORT = process.env.PORT || 4000;
-
-// app.listen(PORT, async () => {
-//   await connectDB();
-//   console.log(`Server running on http://localhost:4000`);
-// });
-
+/* -------------------- Start -------------------- */
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, async () => {
+const start = async () => {
   await connectDB();
-  console.log(`Server running on http://localhost:${PORT}`);
-});
-
-
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URL);
-    console.log("MongoDB connected");
-  } catch (error) {
-    console.error("MongoDB connection error:", error.message);
-    process.exit(1);
-  }
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
 };
 
-module.exports = connectDB;
+start();
