@@ -33,7 +33,7 @@ app.set("trust proxy", 1); // important on Render (secure cookies, proxies)
 app.use(
   cors({
     origin: [
-      process.env.CLIENT_URL, // e.g. https://pixelize.vercel.app
+      process.env.CLIENT_URL,
       "http://localhost:3000",
     ].filter(Boolean),
     credentials: true,
@@ -57,8 +57,6 @@ app.use("/api/post", postRouter);
 /* -------------------- Serve React in Production -------------------- */
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "client", "build")));
-
-  // SPA fallback (must be AFTER API routes)
   app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "client", "build", "index.html"));
   });
@@ -74,8 +72,10 @@ const PORT = process.env.PORT || 4000;
 const start = async () => {
   await connectDB();
   app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on port ${PORT}`);
   });
 };
 
 start();
+
+
