@@ -57,7 +57,9 @@ app.use("/api/post", postRouter);
 /* -------------------- Serve React in Production -------------------- */
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "client", "build")));
-  app.get("*", (req, res) => {
+
+  // SPA fallback (FIXED)
+  app.get(/.*/, (req, res) => {
     res.sendFile(path.join(__dirname, "client", "build", "index.html"));
   });
 }
